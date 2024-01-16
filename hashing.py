@@ -13,12 +13,23 @@ files_and_directories = os.listdir(current_directory_from_user)
 files_in_json = []
 
 def compute_md5(file_path):
+    initial_chunk_size = 4096
+    max_chunk_size = 65536
+    hash_md5 = hashlib.md5()
+    chunk_size = initial_chunk_size
+
     with open(file_path, "rb") as f:
-        file_hash = hashlib.md5()
-        while chunk := f.read(8192):
-            file_hash.update(chunk)
-            
-    return file_hash.hexdigest()
+        while True:
+            chunk = f.read(chunk_size)
+            if not chunk:
+                break
+            hash_md5.update(chunk)
+            # Dynamically adjust chunk size
+            if chunk_size < max_chunk_size:
+                chunk_size *= 2
+
+    return hash_md5.hexdigest()
+
 
 def get_file_info(file_path):
     file_size = os.path.getsize(file_path)
