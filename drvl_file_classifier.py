@@ -42,6 +42,5 @@ def organize_files_by_extension(input_directory):
 
 # Get user input for the directory path
 current_directory_from_user = input("Enter your path: ")
-
 # Call the function to organize files in the specified directory
 organize_files_by_extension(current_directory_from_user)
