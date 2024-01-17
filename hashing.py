@@ -153,9 +153,13 @@ Generating_hash_file(current_directory_from_user)
 source_path = input("Please enter the path of the directory you want to copy : ")
 destination_path = input("Please enter the path of the directory where you want to place the copied directory : ")
 
-# Check if the source and destination paths are valid
-if (os.path.exists(source_path) == False or os.path.exists(destination_path) == False):
+# Check if the source and destination paths are valid and source path is directory
+if (os.path.exists(source_path) == False or os.path.exists(destination_path) == False ):        
     print("Invalid source/destination path. Kindly recompile.")
+    exit()
+    
+if(os.path.isdir(source_path)==False):
+    print("Source path is not a directory")
     exit()
 
 # Copy the directory and generate file information for the copied directory
