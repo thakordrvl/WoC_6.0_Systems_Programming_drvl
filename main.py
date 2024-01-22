@@ -6,9 +6,25 @@ import sys
 import datetime
 import platform
 
-def write_to_json(json_array, json_file_path):
-    with open(json_file_path, 'w') as json_file:
-        json.dump(json_array, json_file, indent=2)
+def write_json(json_path, data):
+    try:
+        with open(json_path, "r") as json_file:
+            existing_data = json.load(json_file)
+    except FileNotFoundError:
+        existing_data = {}
+
+    # Merge existing data with new data
+    existing_data.update(data)
+
+    with open(json_path, "w") as json_file:
+        json.dump(existing_data, json_file, indent=2)
+        
+def read_json(json_path):
+    try:
+        with open(json_path, "r") as json_file:
+            return json.load(json_file)
+    except FileNotFoundError:
+        return {}
 
 def compute_md5(file_path):
     initial_chunk_size = 4096
@@ -42,8 +58,41 @@ def Generating_hash_file(input_directory):
     write_to_json(files_in_json, json_file_path)
     print("JSON file successfully created/updated at " + input_directory)
     
-def add_file(file_name):
-    print()
+def isexist(file_name, path):
+    files_directories = os.listdir(path)
+    
+    for item in files_directories:
+        if item == file_name:
+            return True
+        
+    return False    
+
+class add:
+    def __init__(self, to_file_name):
+        # self.repo_number = input("Please provide the repo_number you want to add in: ")
+        self.file_name = to_file_name
+        self.file_path = os.path.join(os.getcwd(), self.file_name)
+        self.drvl_path = os.getcwd() + "/.drvl"
+
+        # if not os.path.exists(self.repo_path):
+        #     print("Repository does not exist")
+        #     exit()
+
+        self.index_path = os.path.join(self.drvl_path, "branches", "main", "index.json")
+        self.added_path = os.path.join(self.drvl_path, "branches", "main", "added.json")
+        md5_hash = compute_md5(self.file_path)
+
+        # Update index.json
+        index_data = read_json(self.index_path)
+        index_data[self.file_name] = {"md5 hash": md5_hash}
+        write_json(self.index_path, index_data)
+
+        # Update added.json
+        added_data = read_json(self.added_path)
+        added_data[self.file_name] = {"md5 hash": md5_hash}
+        write_json(self.added_path, added_data)
+
+        print(f"File '{self.file_name}' successfully added to the repository.")
         
 def get_tracked_hashes(dir_path): 
     json_path = os.path.join(dir_path,".drvl/branches/main/index.json")
@@ -77,7 +126,7 @@ def print_status(dir_path):
             print(f"- {file}")
     else:
         print("No untracked files.")
-
+        
 def print_usage_help():
     print("drvl - A Version Control System.")
     print("drvl init - Initialize a new drvl repository")
@@ -94,51 +143,39 @@ def print_usage_help():
     print("drvl push <path> - To push your file to another folder")
     print("Created by - Dhruvil")
 
-def drvl_makedirs(dir_path, user_name):
-    drvl_path = os.path.join(dir_path, ".drvl")  # Add a space before ".drvl"
-    os.makedirs(drvl_path)
-    
-    # Check if the platform is Windows
-    if platform.system() == 'Windows':
-        # Use the attrib command to mark the directory as hidden
-        attrib_cmd = f'attrib +h "{drvl_path}"'
-        os.system(attrib_cmd)
-            
-    drvl_subpath_branches = os.path.join(drvl_path, "branches")
-    drvl_subpath_objects = os.path.join(drvl_path, "objects")
-    os.makedirs(drvl_subpath_branches)
-    os.makedirs(drvl_subpath_objects)
-    drvl_subpath_main_branches = os.path.join(drvl_subpath_branches, "main")
-    os.makedirs(drvl_subpath_main_branches)
-    drvl_userstxt_path = os.path.join(drvl_subpath_main_branches, "users")
-    current_date_time = datetime.datetime.now()
-
-    with open(drvl_userstxt_path, "w") as file:
-        file.write(f"Date: {current_date_time.strftime('%Y-%m-%d')}\n")
-        file.write(f"Timestamp: {current_date_time.strftime('%H:%M:%S')}\n")
-        file.write("User: " + user_name)
-        file.write("\n\n")
-        
-def isexist(file_name, path):
-    files_directories = os.listdir(path)
-    
-    for item in files_directories:
-        if item == file_name:
-            return True
-        
-    return False
-
 class init:
-    curr_dir_path = ""
-    user = ""
-    
     def __init__(self, dir_path):
-        self.curr_dir_path = dir_path  # Use self.curr_dir_path to refer to the class attribute
-        
-        if not isexist(".drvl",self.curr_dir_path): 
+        self.curr_dir_path = dir_path
+        self.user = ""
+
+        if not os.path.exists(os.path.join(self.curr_dir_path, ".drvl")):
             self.user = input("Provide a username: ")
-            drvl_makedirs(self.curr_dir_path,self.user)
-          
+            self.drvl_makedirs(self.curr_dir_path, self.user)
+
+    def drvl_makedirs(self, base_path, user_name):
+        drvl_path = os.path.join(base_path, ".drvl")
+        os.makedirs(drvl_path)
+
+        if platform.system() == 'Windows':
+            attrib_cmd = f'attrib +h "{drvl_path}"'
+            os.system(attrib_cmd)
+            
+        branches_path = os.path.join(drvl_path, "branches")
+        objects_path = os.path.join(drvl_path, "objects")
+        os.makedirs(branches_path)
+        os.makedirs(objects_path)
+
+        main_branch_path = os.path.join(branches_path, "main")
+        os.makedirs(main_branch_path)
+        user_txt_path = os.path.join(main_branch_path, "users")
+        current_date_time = datetime.datetime.now()
+
+        with open(user_txt_path, "w") as file:
+            file.write(f"Date: {current_date_time.strftime('%Y-%m-%d')}\n")
+            file.write(f"Timestamp: {current_date_time.strftime('%H:%M:%S')}\n")
+            file.write("User: " + user_name)
+            file.write("\n\n")
+            
 dir_path = os.getcwd()
 
 if len(sys.argv) == 1:
@@ -148,21 +185,27 @@ elif sys.argv[1] == "init":
     obj = init(dir_path)
     # print(dir_path)
     
-elif sys.argv[1]=="add":
-    if(isexist(dir_path,sys.argv[2])):
-        add_file(sys.argv[2])   
-        
-    else:
-        print("File doesnt exist !!")
-        exit()
-        
 elif sys.argv[1]=="status":
-    if(isexist(".drvl",dir_path)==False):
+    if not os.path.exists(dir_path + "/.drvl"):
         print("Exiting program, This folder has not been intialized/ .drvl doesnt exist, Use init command to intialize ")
         exit()
 
     print_status(dir_path)
     
+elif sys.argv[1]=="add":
+    
+    # file_path = os.path.join(dir_path,sys.)
+    
+    if len(sys.argv)<=2:
+        print("File Name not given")
+        exit()
+    
+    if os.path.exists(os.path.join(dir_path,sys.argv[2]))==False:
+        print("File doesnt exist or File name not given!!")
+        exit()
+        
+    else:
+        add(sys.argv[2])   
 else:
     print("Invalid CLA, Exiting program, Kindly recompile")
     exit()
