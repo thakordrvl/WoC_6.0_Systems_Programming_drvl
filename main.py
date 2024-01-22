@@ -6,25 +6,39 @@ import sys
 import datetime
 import platform
 
-def write_json(json_path, data):
+# def write_json(json_path, data):
+#     try:
+#         with open(json_path, "r") as json_file:
+#             existing_data = json.load(json_file)
+#     except FileNotFoundError:
+#         existing_data = {}
+
+#     # Merge existing data with new data
+#     existing_data.append(data)
+
+#     with open(json_path, "w") as json_file:
+#         json.dump(existing_data, json_file, indent=2)
+        
+def append_to_json(json_path, key, value):
     try:
         with open(json_path, "r") as json_file:
             existing_data = json.load(json_file)
     except FileNotFoundError:
         existing_data = {}
 
-    # Merge existing data with new data
-    existing_data.update(data)
+    # Append or update the value for the specified key
+    existing_data[key] = value
 
     with open(json_path, "w") as json_file:
         json.dump(existing_data, json_file, indent=2)
+
         
-def read_json(json_path):
-    try:
-        with open(json_path, "r") as json_file:
-            return json.load(json_file)
-    except FileNotFoundError:
-        return {}
+# def read_json(json_path):
+#     try:
+#         with open(json_path, "r") as json_file:
+#             return json.load(json_file)
+#     except FileNotFoundError:
+#         return {}
 
 def compute_md5(file_path):
     initial_chunk_size = 4096
@@ -45,18 +59,6 @@ def get_file_info(file_path):
     file_size = os.path.getsize(file_path)
     md5_hash = compute_md5(file_path)
     return {"Filename": os.path.basename(file_path), "file size": file_size, "md5 hash": md5_hash}
-
-def Generating_hash_file(input_directory):
-    files_and_directories = os.listdir(input_directory)
-    files_in_json = []
-    for item in files_and_directories:
-        item_path = os.path.join(input_directory, item)
-        if os.path.isfile(item_path):
-            files_in_json.append(get_file_info(item_path))
-
-    json_file_path = os.path.join(input_directory, "file_info.json")
-    write_to_json(files_in_json, json_file_path)
-    print("JSON file successfully created/updated at " + input_directory)
     
 def isexist(file_name, path):
     files_directories = os.listdir(path)
@@ -69,29 +71,14 @@ def isexist(file_name, path):
 
 class add:
     def __init__(self, to_file_name):
-        # self.repo_number = input("Please provide the repo_number you want to add in: ")
         self.file_name = to_file_name
         self.file_path = os.path.join(os.getcwd(), self.file_name)
         self.drvl_path = os.getcwd() + "/.drvl"
-
-        # if not os.path.exists(self.repo_path):
-        #     print("Repository does not exist")
-        #     exit()
-
         self.index_path = os.path.join(self.drvl_path, "branches", "main", "index.json")
         self.added_path = os.path.join(self.drvl_path, "branches", "main", "added.json")
         md5_hash = compute_md5(self.file_path)
-
-        # Update index.json
-        index_data = read_json(self.index_path)
-        index_data[self.file_name] = {"md5 hash": md5_hash}
-        write_json(self.index_path, index_data)
-
-        # Update added.json
-        added_data = read_json(self.added_path)
-        added_data[self.file_name] = {"md5 hash": md5_hash}
-        write_json(self.added_path, added_data)
-
+        append_to_json(self.index_path, self.file_name, {"md5 hash": md5_hash})
+        append_to_json(self.added_path, self.file_name, {"md5 hash": md5_hash})
         print(f"File '{self.file_name}' successfully added to the repository.")
         
 def get_tracked_hashes(dir_path): 
