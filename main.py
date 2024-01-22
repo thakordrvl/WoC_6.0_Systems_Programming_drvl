@@ -4,25 +4,33 @@ import shutil
 import json
 import sys
 import datetime
+import platform
 
-def drvl_makedirs(dir_path,user_name):
-    drvl_path = os.path.join(dir_path, ".drvl")    
+def drvl_makedirs(dir_path, user_name):
+    drvl_path = os.path.join(dir_path, ".drvl")  # Add a space before ".drvl"
     os.makedirs(drvl_path)
+    
+    # Check if the platform is Windows
+    if platform.system() == 'Windows':
+        # Use the attrib command to mark the directory as hidden
+        attrib_cmd = f'attrib +h "{drvl_path}"'
+        os.system(attrib_cmd)
+            
     drvl_subpath_branches = os.path.join(drvl_path, "branches")
     drvl_subpath_objects = os.path.join(drvl_path, "objects")
     os.makedirs(drvl_subpath_branches)
     os.makedirs(drvl_subpath_objects)
-    drvl_subpath_main_branches = os.path.join(drvl_subpath_branches,"main")
+    drvl_subpath_main_branches = os.path.join(drvl_subpath_branches, "main")
     os.makedirs(drvl_subpath_main_branches)
-    drvl_userstxt_path = os.path.join(drvl_subpath_main_branches,"users")
+    drvl_userstxt_path = os.path.join(drvl_subpath_main_branches, "users")
     current_date_time = datetime.datetime.now()
-    
+
     with open(drvl_userstxt_path, "w") as file:
         file.write(f"Date: {current_date_time.strftime('%Y-%m-%d')}\n")
         file.write(f"Timestamp: {current_date_time.strftime('%H:%M:%S')}\n")
-        file.write("User : " + user_name)    
+        file.write("User: " + user_name)
         file.write("\n\n")
-
+        
 def isexist(path):
     files_directories = os.listdir(path)
     
