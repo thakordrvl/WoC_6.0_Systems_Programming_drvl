@@ -46,7 +46,6 @@ def compute_md5(file_path):
 
     return hash_md5.hexdigest()
 
-
 class add:
     def __init__(self, to_file_name):
         
@@ -75,7 +74,6 @@ def addallfiles(dir_path):
     
     for item in files_directories:
         
-        print(item)
         full_path = os.path.join(dir_path,item)
         # print(full_path)
 
@@ -200,6 +198,7 @@ elif sys.argv[1]=="add":
         
     else:
         add(sys.argv[2])   
+        
 else:
     print("Invalid CLA, Exiting program, Kindly recompile")
     exit()
