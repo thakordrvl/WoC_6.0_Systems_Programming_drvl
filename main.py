@@ -5,19 +5,6 @@ import json
 import sys
 import datetime
 import platform
-
-# def write_json(json_path, data):
-#     try:
-#         with open(json_path, "r") as json_file:
-#             existing_data = json.load(json_file)
-#     except FileNotFoundError:
-#         existing_data = {}
-
-#     # Merge existing data with new data
-#     existing_data.append(data)
-
-#     with open(json_path, "w") as json_file:
-#         json.dump(existing_data, json_file, indent=2)
         
 def append_to_json(json_path, key, value):
     try:
@@ -32,45 +19,44 @@ def append_to_json(json_path, key, value):
     with open(json_path, "w") as json_file:
         json.dump(existing_data, json_file, indent=2)
 
-        
-# def read_json(json_path):
-#     try:
-#         with open(json_path, "r") as json_file:
-#             return json.load(json_file)
-#     except FileNotFoundError:
-#         return {}
-
 def compute_md5(file_path):
     initial_chunk_size = 4096
     max_chunk_size = 65536
     hash_md5 = hashlib.md5()
     chunk_size = initial_chunk_size
-    with open(file_path, "rb") as f:
-        while True:
-            chunk = f.read(chunk_size)
-            if not chunk:
-                break
-            hash_md5.update(chunk)
-            if chunk_size < max_chunk_size:
-                chunk_size *= 2
+
+    try:
+        with open(file_path, "rb") as f:
+            while True:
+                chunk = f.read(chunk_size)
+                if not chunk:
+                    break
+                hash_md5.update(chunk)
+                if chunk_size < max_chunk_size:
+                    chunk_size *= 2
+    except FileNotFoundError:
+        print(f"File not found: {file_path}")
+        return None
+    except PermissionError:
+        print(f"Permission error. Check file permissions: {file_path}")
+        return None
+    except Exception as e:
+        print(f"An error occurred: {e}")
+        return None
+
     return hash_md5.hexdigest()
 
-def get_file_info(file_path):
-    file_size = os.path.getsize(file_path)
-    md5_hash = compute_md5(file_path)
-    return {"Filename": os.path.basename(file_path), "file size": file_size, "md5 hash": md5_hash}
-    
-def isexist(file_name, path):
-    files_directories = os.listdir(path)
-    
-    for item in files_directories:
-        if item == file_name:
-            return True
-        
-    return False    
 
 class add:
     def __init__(self, to_file_name):
+        
+        self.dir_path = os.getcwd()
+        files_directories = os.listdir(dir_path)
+        
+        if '.drvl' not in files_directories:
+            print("Exiting program, This folder has not been intialized/ .drvl doesnt exist, Use init command to intialize ")
+            exit()
+        
         self.file_name = to_file_name
         self.file_path = os.path.join(os.getcwd(), self.file_name)
         self.drvl_path = os.getcwd() + "/.drvl"
@@ -81,7 +67,25 @@ class add:
         append_to_json(self.added_path, self.file_name, {"md5 hash": md5_hash})
         print(f"File '{self.file_name}' successfully added to the repository.")
         
-def get_tracked_hashes(dir_path): 
+def addallfiles(dir_path):
+    files_directories = os.listdir(dir_path)
+    if '.drvl' not in files_directories:
+        print("Exiting program, This folder has not been intialized/ .drvl doesnt exist, Use init command to intialize ")
+        exit()
+    
+    for item in files_directories:
+        
+        print(item)
+        full_path = os.path.join(dir_path,item)
+        # print(full_path)
+
+        if os.path.isdir(full_path) and item != '.drvl' and item!='.git':
+            addallfiles(full_path)
+            
+        elif item!='.drvl' and item!='.git':
+            add(item)
+            
+def get_tracked_hashes(dir_path):
     json_path = os.path.join(dir_path,".drvl/branches/main/index.json")
     
     try:
@@ -186,8 +190,11 @@ elif sys.argv[1]=="add":
     if len(sys.argv)<=2:
         print("File Name not given")
         exit()
+        
+    elif sys.argv[2]=='.':
+        addallfiles(dir_path)
     
-    if os.path.exists(os.path.join(dir_path,sys.argv[2]))==False:
+    elif os.path.exists(os.path.join(dir_path,sys.argv[2]))==False:
         print("File doesnt exist or File name not given!!")
         exit()
         
@@ -196,3 +203,9 @@ elif sys.argv[1]=="add":
 else:
     print("Invalid CLA, Exiting program, Kindly recompile")
     exit()
+
+
+
+
+
+
