@@ -49,3 +49,4 @@ if(os.path.exists(current_directory_from_user)==False):
     exit()
     
 organize_files_by_extension(current_directory_from_user)
+

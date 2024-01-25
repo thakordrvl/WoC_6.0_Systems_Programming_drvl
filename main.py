@@ -3,8 +3,10 @@ import hashlib
 import shutil
 import json
 import sys
-import datetime
+from datetime import datetime
 import platform
+import numpy as np
+import base64
         
 def append_to_json(json_path, key, value):
     try:
@@ -46,26 +48,109 @@ def compute_md5(file_path):
 
     return hash_md5.hexdigest()
 
-class add:
-    def __init__(self, to_file_name):
+def add(to_file_name):
         
-        self.dir_path = os.getcwd()
-        files_directories = os.listdir(dir_path)
+    dir_path = os.getcwd()
+    files_directories = os.listdir(dir_path)
+    
+    if '.drvl' not in files_directories:
+        print("Exiting program, This folder has not been intialized/ .drvl doesnt exist, Use init command to intialize ")
+        exit()
+    
+    file_name = to_file_name
+    file_path = os.path.join(os.getcwd(), file_name)
+    drvl_path = os.getcwd() + "/.drvl"
+    index_path = os.path.join(drvl_path, "branches", "main", "index.json")
+    added_path = os.path.join(drvl_path, "branches", "main", "added.json")
+    md5_hash = compute_md5(file_path)
+    append_to_json(index_path, file_name, {"md5 hash": md5_hash})
+    append_to_json(added_path, file_name, {"md5 hash": md5_hash})
+    print(f"File '{file_name}' successfully added to the repository.")
+
+def extract_username_from_file(file_path):
+    try:
+        with open(file_path, 'r') as file:
+            lines = file.readlines()
+            for line in lines:
+                if "User:" in line:
+                    username = line.split("User:")[1].strip()
+                    return username
+
+            print(f"Error: 'User:' not found in '{file_path}'.")
+            return None
+    except FileNotFoundError:
+        print(f"Error: File '{file_path}' not found.")
+        return None
+
+
+def encode_file_content_to_base64(file_path):
+    with open(file_path, 'rb') as file:
+        binary_data = file.read()
+        return base64.b64encode(binary_data).decode('utf-8')      
+    
+def commits(base_directory, message):
+    drvl_path = os.path.join(base_directory,".drvl")
+    index_path = os.path.join(drvl_path,"branches","main",'index.json')
+    commits_path = os.path.join(drvl_path, 'objects', 'commits.json')
+    print(index_path)
+    
+    if os.path.exists(drvl_path)==False:
+        print("This directory has not been initalised")
+        exit()
         
-        if '.drvl' not in files_directories:
-            print("Exiting program, This folder has not been intialized/ .drvl doesnt exist, Use init command to intialize ")
+    if os.path.exists(index_path)==False:
+        print("Files has not been tracked yet. Use add command to track files, After that you could use commit command")
+        exit()
+        
+    commits = []
+    if os.path.exists(commits_path):
+        with open(commits_path, 'r') as commits_file:
+            commits = json.load(commits_file)
+        
+    with open(index_path, 'r') as index_file:
+        index_data = json.load(index_file)
+        
+    if os.path.exists(os.path.join(drvl_path,"branches","main","users"))==False:
+        print("User.txt file doesnt exist kindly restore it back to proceed further")
+        exit()
+        
+    username = extract_username_from_file(os.path.join(drvl_path,"branches","main","users"))
+    
+    commit = {
+        "timestamp": datetime.utcnow().isoformat(),
+        "user-name": username, 
+        "message": message,
+        "date": datetime.utcnow().strftime("%d-%m-%Y"),
+        "files": []
+    }
+    # Update or add files to the commit
+    for filename, file_info in index_data.items():
+        file_path = os.path.join(base_directory, filename)
+        if os.path.exists(file_path):
+            actual_md5 = compute_md5(file_path)
+
+            if actual_md5 == file_info.get("md5 hash") or filename=="main.py":
+                encoded_content = encode_file_content_to_base64(file_path)
+                commit["files"].append({filename: encoded_content})
+            else:
+                print(f"Warning: File '{filename}' has changed. Kindly Use Add command first.")
+                exit()
+        else:
+            print(f"Warning: File '{filename}' not found. Kindly use Add command first")
             exit()
+
+    # Append the new commit to the array
+    commits.append(commit)
+
+# Write the updated commits.json without overwriting existing content
+    with open(commits_path, 'w') as commits_file:
+        json.dump(commits, commits_file, indent=2)
+        commits_file.write('\n')
         
-        self.file_name = to_file_name
-        self.file_path = os.path.join(os.getcwd(), self.file_name)
-        self.drvl_path = os.getcwd() + "/.drvl"
-        self.index_path = os.path.join(self.drvl_path, "branches", "main", "index.json")
-        self.added_path = os.path.join(self.drvl_path, "branches", "main", "added.json")
-        md5_hash = compute_md5(self.file_path)
-        append_to_json(self.index_path, self.file_name, {"md5 hash": md5_hash})
-        append_to_json(self.added_path, self.file_name, {"md5 hash": md5_hash})
-        print(f"File '{self.file_name}' successfully added to the repository.")
         
+    print("Commit Successful")
+    
+
 def addallfiles(dir_path):
     files_directories = os.listdir(dir_path)
     if '.drvl' not in files_directories:
@@ -140,6 +225,10 @@ class init:
         if not os.path.exists(os.path.join(self.curr_dir_path, ".drvl")):
             self.user = input("Provide a username: ")
             self.drvl_makedirs(self.curr_dir_path, self.user)
+            
+        else:
+            print("This folder has already been intialised once")
+            exit()
 
     def drvl_makedirs(self, base_path, user_name):
         drvl_path = os.path.join(base_path, ".drvl")
@@ -157,10 +246,10 @@ class init:
         main_branch_path = os.path.join(branches_path, "main")
         os.makedirs(main_branch_path)
         user_txt_path = os.path.join(main_branch_path, "users")
-        current_date_time = datetime.datetime.now()
+        current_date_time = datetime.now()
 
         with open(user_txt_path, "w") as file:
-            file.write(f"Date: {current_date_time.strftime('%Y-%m-%d')}\n")
+            file.write(f"Date: {current_date_time.strftime('%d-%m-%Y')}\n")
             file.write(f"Timestamp: {current_date_time.strftime('%H:%M:%S')}\n")
             file.write("User: " + user_name)
             file.write("\n\n")
@@ -199,12 +288,28 @@ elif sys.argv[1]=="add":
     else:
         add(sys.argv[2])   
         
+elif sys.argv[1] == "commit":
+    if len(sys.argv) > 3 and sys.argv[2] == "-m":
+        
+        commit_message = sys.argv[3]
+        flag1 = False
+        
+        for i in commit_message:
+            if i!=' ':
+                flag1 = True
+                
+        if flag1==False:
+            print("Cannot commit with empty message kindly recompile")
+            exit()
+            
+        commits(dir_path,commit_message)
+        
+    else:
+        print("Invalid commit command. Use 'commit -m \"message\"'.")
+        exit()
+       
 else:
     print("Invalid CLA, Exiting program, Kindly recompile")
     exit()
-
-
-
-
 
 
