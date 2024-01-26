@@ -11,6 +11,15 @@ import base64
 dir_path = os.getcwd()
 universal_drvl_path = ""
 
+def remove_from_json(json_path):
+    try:
+        with open(json_path, "w") as json_file:
+            json_file.write("{}")
+        # print(f"Content of '{json_path}' successfully removed.")
+    except FileNotFoundError:
+        print(f"Error: File '{json_path}' not found.")
+        exit()
+
 def append_to_json(json_path, key, value):
     try:
         # Create the directory structure if it doesn't exist
@@ -72,6 +81,21 @@ def extract_universal_drvl_path(file_path):
         print(f"Error: File '{file_path}' not found.")
         return None
 
+def extract_username_from_file(file_path):
+    try:
+        with open(file_path, 'r') as file:
+            lines = file.readlines()
+            for line in lines:
+                if "User:" in line:
+                    username = line.split("User:")[1].strip()
+                    return username
+
+            print(f"Error: 'User:' not found in '{file_path}'.")
+            return None
+    except FileNotFoundError:
+        print(f"Error: File '{file_path}' not found.")
+        return None
+
 def add(to_file_name, file_path):
         
     dir_path = os.getcwd()
@@ -93,26 +117,73 @@ def add(to_file_name, file_path):
     append_to_json(added_path, file_name, {"md5 hash": md5_hash, "file_path": file_path})
     print(f"File '{file_name}' successfully added to the repository.")
 
-def extract_username_from_file(file_path):
-    try:
-        with open(file_path, 'r') as file:
-            lines = file.readlines()
-            for line in lines:
-                if "User:" in line:
-                    username = line.split("User:")[1].strip()
-                    return username
-
-            print(f"Error: 'User:' not found in '{file_path}'.")
-            return None
-    except FileNotFoundError:
-        print(f"Error: File '{file_path}' not found.")
-        return None
+def addallfiles(dir_path, flag):
+    files_directories = os.listdir(dir_path)
+    if '.drvl' not in files_directories and flag==False:
+        print("Exiting program, This folder has not been intialized/ .drvl doesnt exist, Use init command to intialize ")
+        exit()
     
+    for item in files_directories:
+        
+        full_path = os.path.join(dir_path,item)
+        # print(full_path)
+
+        if os.path.isdir(full_path) and item != '.drvl' and item!='.git':
+            addallfiles(full_path,True)
+            
+        elif item!='.drvl' and item!='.git':
+            add(item,full_path)  
+  
 def encode_file_content_to_base64(file_path):
     with open(file_path, 'rb') as file:
         binary_data = file.read()
         return base64.b64encode(binary_data).decode('utf-8')      
     
+def get_tracked_hashes(dir_path):
+    json_path = os.path.join(dir_path,".drvl/branches/main/added.json")
+    
+    try:
+        with open(json_path, "r") as added_file:
+            added_data = json.load(added_file)
+            tracked_hashes = [file_info["md5 hash"] for file_info in added_data.values()]
+            return tracked_hashes
+    except FileNotFoundError:
+        return []    
+
+def get_untracked_files(dir_path):
+    tracked_hashes = get_tracked_hashes(dir_path)
+    all_files = [file for file in os.listdir(dir_path) if os.path.isfile(file)]
+    untracked_files = []
+
+    for file in all_files:
+        file_hash = compute_md5(file)
+        if file_hash not in tracked_hashes and file!="main.py":
+            untracked_files.append(file)
+
+    return untracked_files    
+     
+def decode_and_update_files(commit):
+    files = commit.get("files", [])
+
+    for file_data in files:
+        filename = file_data.get("filename")
+        encoded_content = file_data.get("encoded_content")
+        file_path = file_data.get("file_path")
+
+        try:
+            decoded_content = base64.b64decode(encoded_content)
+
+            os.makedirs(os.path.dirname(file_path), exist_ok=True)
+
+            with open(file_path, 'wb') as file:
+                file.write(decoded_content)
+
+            print(f"File '{filename}' updated successfully.")
+        except (PermissionError, FileNotFoundError) as e:
+            print(f"Error updating file '{filename}': {str(e)}")
+        except Exception as e:
+            print(f"Unexpected error updating file '{filename}': {str(e)}")
+            
 def commits(base_directory, message):
     drvl_path = os.path.join(base_directory, ".drvl")
     added_path = os.path.join(drvl_path, "branches", "main", 'added.json')
@@ -146,7 +217,6 @@ def commits(base_directory, message):
         "files": []
     }
     
-    # Update or add files to the commit
     for filename, file_info in added_data.items():
         file_path = file_info.get("file_path")
         if os.path.exists(file_path):
@@ -162,7 +232,6 @@ def commits(base_directory, message):
             print(f"Warning: File '{filename}' not found. Kindly use the Add command first.")
             exit()
 
-    # Append the new commit to the array
     commits.append(commit)
     with open(commits_path, 'w') as commits_file:
         json.dump(commits, commits_file, indent=2)
@@ -175,58 +244,26 @@ def remove_commit(commits_path):
         print("Error: 'commits.json' not found.")
         return None
 
-    # Read existing commits.json
     with open(commits_path, 'r') as commits_file:
         commits = json.load(commits_file)
-
-    # Check if there are any commits to remove
+        
     if not commits:
         print("Error: No commits to remove.")
         return None
-
-    # Remove the last commit
+    
     removed_commit = commits.pop()
 
-    # Check if there is still at least one commit left
     if not commits:
         print("Error: No commit left after removal.")
         return None
 
-    # Get the commit before the removed commit
     commit_before_removed = commits[-1]
 
-    # Write the updated commits.json
     with open(commits_path, 'w') as commits_file:
         json.dump(commits, commits_file, indent=2)
 
     print("Commit removed successfully:")
-    # print(json.dumps(removed_commit, indent=2))
-
     return commit_before_removed
-    
-def decode_and_update_files(commit):
-    files = commit.get("files", [])
-
-    for file_data in files:
-        filename = file_data.get("filename")
-        encoded_content = file_data.get("encoded_content")
-        file_path = file_data.get("file_path")
-
-        try:
-            decoded_content = base64.b64decode(encoded_content)
-
-            # Ensure the directory structure exists
-            os.makedirs(os.path.dirname(file_path), exist_ok=True)
-
-            # Attempt to open the file in write-binary mode
-            with open(file_path, 'wb') as file:
-                file.write(decoded_content)
-
-            print(f"File '{filename}' updated successfully.")
-        except (PermissionError, FileNotFoundError) as e:
-            print(f"Error updating file '{filename}': {str(e)}")
-        except Exception as e:
-            print(f"Unexpected error updating file '{filename}': {str(e)}")
     
 def rmcommit(dir_path):
     commits_path = os.path.join(dir_path,".drvl","objects","commits.json")
@@ -237,46 +274,19 @@ def rmcommit(dir_path):
     to_be_restore = remove_commit(commits_path)
     decode_and_update_files(to_be_restore)
 
-def addallfiles(dir_path, flag):
-    files_directories = os.listdir(dir_path)
-    if '.drvl' not in files_directories and flag==False:
-        print("Exiting program, This folder has not been intialized/ .drvl doesnt exist, Use init command to intialize ")
+def rmadd(base_directory):
+    drvl_path = os.path.join(base_directory, ".drvl")
+    added_path = os.path.join(drvl_path, "branches", "main", "added.json")
+    index_path = os.path.join(drvl_path, "branches", "main", "index.json")
+
+    if not os.path.exists(added_path):
+        print("Files have not been tracked yet or added.json doesnt exist. Use add command to track files and create added.json.")
         exit()
-    
-    for item in files_directories:
         
-        full_path = os.path.join(dir_path,item)
-        # print(full_path)
-
-        if os.path.isdir(full_path) and item != '.drvl' and item!='.git':
-            addallfiles(full_path,True)
+    remove_from_json(added_path)
+    # remove_from_json(index_path)
+    print("All files successfully removed from tracking.")
             
-        elif item!='.drvl' and item!='.git':
-            add(item,full_path)
-            
-def get_tracked_hashes(dir_path):
-    json_path = os.path.join(dir_path,".drvl/branches/main/index.json")
-    
-    try:
-        with open(json_path, "r") as index_file:
-            index_data = json.load(index_file)
-            tracked_hashes = [file_info["md5 hash"] for file_info in index_data.values()]
-            return tracked_hashes
-    except FileNotFoundError:
-        return []
-
-def get_untracked_files(dir_path):
-    tracked_hashes = get_tracked_hashes(dir_path)
-    all_files = [file for file in os.listdir(dir_path) if os.path.isfile(file)]
-    untracked_files = []
-
-    for file in all_files:
-        file_hash = compute_md5(file)
-        if file_hash not in tracked_hashes and file!="main.py":
-            untracked_files.append(file)
-
-    return untracked_files
-
 def print_status(dir_path):
     untracked_files = get_untracked_files(dir_path)
 
@@ -423,6 +433,20 @@ elif sys.argv[1]=="rmcommit":
         
     universal_drvl_path = extract_universal_drvl_path(os.path.join(dir_path,".drvl","branches","main","users"))
     rmcommit(dir_path)
+    
+    
+elif sys.argv[1]=="rmadd":
+    
+    if not os.path.exists(dir_path + "/.drvl"):
+        print("Exiting program, This folder has not been intialized/ .drvl doesnt exist, Use init command to intialize ")
+        exit()
+        
+    if len(sys.argv)>2:
+        print("wrong synyax for status. kindly recompile")
+        exit()
+        
+    universal_drvl_path = extract_universal_drvl_path(os.path.join(dir_path,".drvl","branches","main","users"))
+    rmadd(dir_path)
            
 else:
     print("Invalid CLA, Exiting program, Kindly recompile")
