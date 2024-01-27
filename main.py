@@ -207,12 +207,20 @@ def commits(base_directory, message):
     drvl_path = os.path.join(base_directory, ".drvl")
     added_path = os.path.join(drvl_path, "branches", "main", 'added.json')
     commits_path = os.path.join(drvl_path, 'objects', 'commits.json')
-      
+    md5_hash_path = os.path.join(drvl_path, 'objects', 'files_md5_hash.json')
+    
     if not os.path.exists(added_path):
         print("Files have not been tracked yet. Use the add command to track files. After that, you can use the commit command.")
         exit()
-        
+
+    # Create an empty MD5 hash dictionary if the file doesn't exist
+    md5_hash_data = {}
+    if os.path.exists(md5_hash_path):
+        with open(md5_hash_path, 'r') as md5_hash_file:
+            md5_hash_data = json.load(md5_hash_file)
+    
     commits = []
+    
     if os.path.exists(commits_path):
         with open(commits_path, 'r') as commits_file:
             commits = json.load(commits_file)
@@ -240,10 +248,15 @@ def commits(base_directory, message):
         file_path = file_info.get("file_path")
         if os.path.exists(file_path):
             actual_md5 = compute_md5(file_path)
-
+            
+            if actual_md5 == md5_hash_data.get(file_path):
+                print(f"No changes made to file '{filename}'. Skipping.")
+                continue
+            
             if actual_md5 == file_info.get("md5 hash") or filename == "main.py":
                 encoded_content = encode_file_content_to_base64(file_path)
                 commit["files"].append({"filename": filename, "file_path": file_path, "encoded_content": encoded_content})
+                md5_hash_data[file_path] = actual_md5  # Update the MD5 hash in the dictionary
             else:
                 print(f"Warning: File '{filename}' has changed. Kindly use the Add command first.")
                 exit()
@@ -252,9 +265,14 @@ def commits(base_directory, message):
             exit()
 
     commits.append(commit)
+    
     with open(commits_path, 'w') as commits_file:
         json.dump(commits, commits_file, indent=2)
         commits_file.write('\n')
+
+    with open(md5_hash_path, 'w') as md5_hash_file:
+        json.dump(md5_hash_data, md5_hash_file, indent=2)
+        md5_hash_file.write('\n')
         
     print("Commit Successful")
     
@@ -513,5 +531,3 @@ else:
     print("Invalid command, Exiting program, Kindly recompile")
     exit()
     
-
-
