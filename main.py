@@ -18,7 +18,7 @@ def remove_from_json(json_path):
         # print(f"Content of '{json_path}' successfully removed.")
     except FileNotFoundError:
         print(f"Error: File '{json_path}' not found.")
-        exit()
+        return
 
 def append_to_json(json_path, key, value):
     try:
@@ -121,7 +121,7 @@ def addallfiles(dir_path, flag):
     files_directories = os.listdir(dir_path)
     if '.drvl' not in files_directories and flag==False:
         print("Exiting program, This folder has not been intialized/ .drvl doesnt exist, Use init command to intialize ")
-        exit()
+        return
     
     for item in files_directories:
         
@@ -211,7 +211,7 @@ def commits(base_directory, message):
     
     if not os.path.exists(added_path):
         print("Files have not been tracked yet. Use the add command to track files. After that, you can use the commit command.")
-        exit()
+        return
 
     # Create an empty MD5 hash dictionary if the file doesn't exist
     md5_hash_data = {}
@@ -232,7 +232,7 @@ def commits(base_directory, message):
     
     if not os.path.exists(users_file_path):
         print("Users.txt file doesn't exist. Kindly restore it back to proceed further.")
-        exit()
+        return
         
     username = extract_username_from_file(users_file_path)
     
@@ -259,10 +259,10 @@ def commits(base_directory, message):
                 md5_hash_data[file_path] = actual_md5  # Update the MD5 hash in the dictionary
             else:
                 print(f"Warning: File '{filename}' has changed. Kindly use the Add command first.")
-                exit()
+                return
         else:
             print(f"Warning: File '{filename}' not found. Kindly use the Add command first.")
-            exit()
+            return
 
     # Check if commit has files before appending it to commits
     if commit["files"]:
@@ -279,8 +279,7 @@ def commits(base_directory, message):
     with open(md5_hash_path, 'w') as md5_hash_file:
         json.dump(md5_hash_data, md5_hash_file, indent=2)
         md5_hash_file.write('\n')
-
-    
+        
 def remove_commit(commits_path):
     if not os.path.exists(commits_path):
         print("Error: 'commits.json' not found.")
@@ -313,6 +312,7 @@ def rmcommit(dir_path):
     
     if(os.path.exists(commits_path)==False):
         print("The path of commits.json has been changed. Kindly check if the file exists and it is placed in correct folder")
+        return
     
     to_be_restore = remove_commit(commits_path)
     
@@ -326,13 +326,14 @@ def rmadd(base_directory):
 
     if not os.path.exists(added_path):
         print("Files have not been tracked yet or added.json doesnt exist. Use add command to track files and create added.json.")
-        exit()
+        return
         
     remove_from_json(added_path)
     # remove_from_json(index_path)
     print("All files successfully removed from tracking.")
             
 def print_status(dir_path):
+    
     untracked_files = get_untracked_files(dir_path)
 
     if untracked_files:
@@ -365,19 +366,19 @@ def push(base_directory, destination_path):
 
     if not os.path.exists(commits_path):
         print("No commits found. Use commit command to commit changes.")
-        exit()
+        return
 
     with open(commits_path, 'r') as commits_file:
         commits = json.load(commits_file)
 
     if not commits:
         print("No commits found. Use commit command to commit changes.")
-        exit()
+        return
 
     last_commit = commits[-1]
     if decode_and_update_files(last_commit,destination_path):
         print("commits successfully copied to destination folder")
-        exit()
+        return
 
 class init:
     def __init__(self, dir_path):
@@ -387,10 +388,10 @@ class init:
         if not os.path.exists(os.path.join(self.curr_dir_path, ".drvl")):
             self.user = input("Provide a username: ")
             self.drvl_makedirs(self.curr_dir_path, self.user)
+            print(".drvl created successfully")
             
         else:
             print("This folder has already been intialised once")
-            exit()
 
     def drvl_makedirs(self, base_path, user_name):
         drvl_path = os.path.join(base_path, ".drvl")
@@ -417,122 +418,130 @@ class init:
             file.write("universal_drvl_path: " + os.getcwd())
             file.write("\n\n")
             
-if len(sys.argv) == 1:
-    print_usage_help()
+while True:
+    user_input = input("Enter command: ")
     
-elif sys.argv[1] == "init": 
-    obj = init(dir_path)
-    # print(dir_path)
+    if not user_input:
+        continue
     
-elif sys.argv[1]=="status":
-    if not os.path.exists(dir_path + "/.drvl"):
-        print("Exiting program, This folder has not been intialized/ .drvl doesnt exist, Use init command to intialize ")
-        exit()
+    args = user_input.split()
+    if args[0] == "exit":
+        print("Exiting program.")
+        break
+    
+    if args[0]=="help":
+        if len(args) > 1:
+            print("wrong syntax for help. Kindly recompile")
+            continue
         
-    if len(sys.argv)>2:
-        print("wrong synyax for status. kindly recompile")
-        exit()
+        universal_drvl_path = extract_universal_drvl_path(os.path.join(dir_path, ".drvl", "branches", "main", "users"))
+        print_usage_help()
         
-    universal_drvl_path = extract_universal_drvl_path(os.path.join(dir_path,".drvl","branches","main","users"))
-    print_status(dir_path)
-    
-elif sys.argv[1]=="add":
-    
-    if not os.path.exists(dir_path + "/.drvl"):
-        print("Exiting program, This folder has not been intialized/ .drvl doesnt exist, Use init command to intialize ")
-        exit()
-    
-    if len(sys.argv)<=2:
-        print("File Name not given")
-        exit()
+    elif args[0] == "init":
+        if len(args) > 1:
+            print("wrong syntax for help. Kindly recompile")
+            continue
         
-    elif sys.argv[2]=='.':
-        universal_drvl_path = extract_universal_drvl_path(os.path.join(dir_path,".drvl","branches","main","users"))
-        addallfiles(dir_path,False)
+        init(dir_path)
         
+    elif args[0] == "status":
+        if not os.path.exists(dir_path + "/.drvl"):
+            print("Exiting program, This folder has not been initialized/ .drvl doesn't exist, Use init command to initialize ")
+            continue
+        
+        if len(args) > 1:
+            print("Wrong syntax for status. Kindly recompile.")
+            continue
+        
+        universal_drvl_path = extract_universal_drvl_path(os.path.join(dir_path, ".drvl", "branches", "main", "users"))
+        print_status(dir_path)
+    
+    elif args[0] == "add":
+        if not os.path.exists(dir_path + "/.drvl"):
+            print("Exiting program, This folder has not been initialized/ .drvl doesn't exist, Use init command to initialize ")
+            continue
+        
+        if len(args) > 2:
+            print("wrong syntax for add command")
+            continue
+
+        if len(args) <= 1:
+            print("File Name not given")
+            continue
+
+        elif args[1] == '.':
+            universal_drvl_path = extract_universal_drvl_path(os.path.join(dir_path, ".drvl", "branches", "main", "users"))
+            addallfiles(dir_path, False)
+
+        else:
+            file_path = os.path.join(dir_path, args[1])
+
+            if not os.path.exists(file_path):
+                print("File doesn't exist or File name not given!!")
+                continue
+
+            universal_drvl_path = extract_universal_drvl_path(os.path.join(dir_path, ".drvl", "branches", "main", "users"))
+            add(args[1], file_path)
+     
+    elif args[0] == "commit":
+        if not os.path.exists(dir_path + "/.drvl"):
+            print("Exiting program, This folder has not been initialized/ .drvl doesn't exist, Use init command to initialize ")
+            continue
+
+        if len(args) > 3 and args[1] == "-m":
+            if args[2][0] == '"' and args[-1][-1] == '"':
+                commit_message = " ".join(args[2:])
+                commit_message = commit_message[1:-1]  # Remove the leading and trailing quotes
+                universal_drvl_path = extract_universal_drvl_path(os.path.join(dir_path, ".drvl", "branches", "main", "users"))
+                commits(dir_path, commit_message)
+            else:
+                print("Invalid commit command. Use 'commit -m \"message\"'.")
+                continue
+        else:
+            print("Invalid commit command. Use 'commit -m \"message\"'.")
+            continue
+
+    elif args[0] == "rmcommit":
+        if not os.path.exists(dir_path + "/.drvl"):
+            print("Exiting program, This folder has not been initialized/ .drvl doesn't exist, Use init command to initialize ")
+            continue
+
+        if len(args) > 1:
+            print("Wrong syntax for rmcommit. Kindly recompile.")
+            continue
+
+        universal_drvl_path = extract_universal_drvl_path(os.path.join(dir_path, ".drvl", "branches", "main", "users"))
+        rmcommit(dir_path)
+
+    elif args[0] == "rmadd":
+        if not os.path.exists(dir_path + "/.drvl"):
+            print("Exiting program, This folder has not been initialized/ .drvl doesn't exist, Use init command to initialize ")
+            continue
+
+        if len(args) > 1:
+            print("Wrong syntax for rmadd. Kindly recompile.")
+            continue
+
+        universal_drvl_path = extract_universal_drvl_path(os.path.join(dir_path, ".drvl", "branches", "main", "users"))
+        rmadd(dir_path)
+
+    elif args[0] == "push":
+        if not os.path.exists(dir_path + "/.drvl"):
+            print("Exiting program, This folder has not been initialized/ .drvl doesn't exist, Use init command to initialize ")
+            continue
+
+        if len(args) > 3 or len(args) <= 2:
+            print("Wrong syntax for push. Kindly recompile.")
+            continue
+
+        if not os.path.exists(args[1]):
+            print("Destination does not exist. Kindly recompile.")
+            continue
+
+        dest_path = args[1]
+        universal_drvl_path = extract_universal_drvl_path(os.path.join(dir_path, ".drvl", "branches", "main", "users"))
+        push(dir_path, dest_path)
+
     else:
-        file_path = os.path.join(dir_path,sys.argv[2])
-        
-        if os.path.exists(file_path)==False:
-            print("File doesnt exist or File name not given!!")
-            exit()
-            
-        universal_drvl_path = extract_universal_drvl_path(os.path.join(dir_path,".drvl","branches","main","users"))
-        add(sys.argv[2],file_path)   
-        
-elif sys.argv[1] == "commit":
-    
-    if not os.path.exists(dir_path + "/.drvl"):
-        print("Exiting program, This folder has not been intialized/ .drvl doesnt exist, Use init command to intialize ")
-        exit()
-    
-    if len(sys.argv) > 3 and sys.argv[2] == "-m":
-        
-        commit_message = sys.argv[3]
-        flag1 = False
-        
-        for i in commit_message:
-            if i!=' ':
-                flag1 = True
-                
-        if flag1==False:
-            print("Cannot commit with empty message kindly recompile")
-            exit()
-            
-        universal_drvl_path = extract_universal_drvl_path(os.path.join(dir_path,".drvl","branches","main","users"))
-        commits(dir_path,commit_message)
-        
-    else:
-        print("Invalid commit command. Use 'commit -m \"message\"'.")
-        exit()
-        
-elif sys.argv[1]=="rmcommit":
-    
-    if not os.path.exists(dir_path + "/.drvl"):
-        print("Exiting program, This folder has not been intialized/ .drvl doesnt exist, Use init command to intialize ")
-        exit()
-        
-    if len(sys.argv)>2:
-        print("wrong synyax for status. kindly recompile")
-        exit()
-        
-    universal_drvl_path = extract_universal_drvl_path(os.path.join(dir_path,".drvl","branches","main","users"))
-    rmcommit(dir_path)
-    
-    
-elif sys.argv[1]=="rmadd":
-    
-    if not os.path.exists(dir_path + "/.drvl"):
-        print("Exiting program, This folder has not been intialized/ .drvl doesnt exist, Use init command to intialize ")
-        exit()
-        
-    if len(sys.argv)>2:
-        print("wrong synyax for status. kindly recompile")
-        exit()
-        
-    universal_drvl_path = extract_universal_drvl_path(os.path.join(dir_path,".drvl","branches","main","users"))
-    rmadd(dir_path)
-    
-elif sys.argv[1]=="push":
-    
-    if not os.path.exists(dir_path + "/.drvl"):
-        print("Exiting program, This folder has not been intialized/ .drvl doesnt exist, Use init command to intialize ")
-        exit()
-        
-        
-    if len(sys.argv)>3 or len(sys.argv)<=2:
-        print("wrong synyax for status. kindly recompile")
-        exit()
-        
-    if not os.path.exists(sys.argv[2]):
-        print("Destination does not exist. Kindly recompile")
-        exit()
-    
-    dest_path = sys.argv[2]
-    universal_drvl_path = extract_universal_drvl_path(os.path.join(dir_path,".drvl","branches","main","users"))
-    push(dir_path,dest_path)
-               
-else:
-    print("Invalid command, Exiting program, Kindly recompile")
-    exit()
+        print("Invalid command. Please try again.")
     
