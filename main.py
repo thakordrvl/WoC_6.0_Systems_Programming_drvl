@@ -264,17 +264,22 @@ def commits(base_directory, message):
             print(f"Warning: File '{filename}' not found. Kindly use the Add command first.")
             exit()
 
-    commits.append(commit)
+    # Check if commit has files before appending it to commits
+    if commit["files"]:
+        commits.append(commit)
     
-    with open(commits_path, 'w') as commits_file:
-        json.dump(commits, commits_file, indent=2)
-        commits_file.write('\n')
+        with open(commits_path, 'w') as commits_file:
+            json.dump(commits, commits_file, indent=2)
+            commits_file.write('\n')
+
+        print("Commit Successful")
+    else:
+        print("No changes made. Commit skipped.")
 
     with open(md5_hash_path, 'w') as md5_hash_file:
         json.dump(md5_hash_data, md5_hash_file, indent=2)
         md5_hash_file.write('\n')
-        
-    print("Commit Successful")
+
     
 def remove_commit(commits_path):
     if not os.path.exists(commits_path):
