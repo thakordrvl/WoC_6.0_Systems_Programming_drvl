@@ -460,6 +460,10 @@ def print_usage_help():
 def push(base_directory, destination_path):
     drvl_path = os.path.join(base_directory, ".drvl")
     commits_path = os.path.join(drvl_path, 'objects', 'commits.json')
+    
+    if os.path.exists(destination_path)==False:
+        print("Destination path/directory doesnt exist kindly check")
+        return
 
     if not os.path.exists(commits_path):
         print("No commits found. Use commit command to commit changes.")
@@ -622,7 +626,7 @@ while True:
         if args[1] == "-m":
             if args[2][0] == '"' and args[-1][-1] == '"':
                 commit_message = " ".join(args[2:])
-                commit_message = commit_message[1:-1]  # Remove the leading and trailing quotes
+                commit_message = commit_message[1:-1]  
                 flag1 = False
                 
                 for i in commit_message:
@@ -670,19 +674,10 @@ while True:
         if not os.path.exists(dir_path + "/.drvl"):
             print("Exiting program, This folder has not been initialized/ .drvl doesn't exist, Use init command to initialize ")
             continue
-
-        if len(args) == 2:
-            if args[1][0] == '"' and args[1][-1] == '"':
-                dest_path = args[1][1:-1]  # Remove the leading and trailing quotes
-                universal_drvl_path = extract_universal_drvl_path(os.path.join(dir_path, ".drvl", "branches", "main", "users"))
-                push(dir_path, dest_path)
-            else:
-                print("Invalid push command. Destination should be enclosed in double quotes.")
-                continue
-        else:
-            print("Wrong syntax for push. Kindly recompile.")
-            continue
         
+        dest_path = " ".join(args[1:]).strip('"')
+        universal_drvl_path = extract_universal_drvl_path(os.path.join(dir_path, ".drvl", "branches", "main", "users"))
+      
     elif args[0] == "user" and len(args)>=2 and args[1]=="show":
         if not os.path.exists(dir_path + "/.drvl"):
             print("Exiting program, This folder has not been initialized/ .drvl doesn't exist, Use init command to initialize ")
@@ -733,10 +728,10 @@ while True:
             print("Wrong syntax for log. Use 'log'.")
             continue
         
-        if os.name == 'posix':  # For Unix/Linux/MacOS
+        if os.name == 'posix': 
             os.system('clear')
             
-        elif os.name == 'nt':  # For Windows
+        elif os.name == 'nt':  
             os.system('cls')
             
         else:
