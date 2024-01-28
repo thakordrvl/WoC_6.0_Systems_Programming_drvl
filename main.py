@@ -102,7 +102,7 @@ def extract_username_from_file(dir_path):
 def change_user_name(dir_path, new_username):
     
     file_path = os.path.join(dir_path,".drvl","branches","main","users")
-    old_user = extract_username_from_file(file_path)
+    old_user = extract_username_from_file(dir_path)
     
     with open(file_path, 'r') as file:
         lines = file.readlines()
@@ -246,14 +246,8 @@ def commits(base_directory, message):
         
     with open(added_path, 'r') as added_file:
         added_data = json.load(added_file)
-        
-    users_file_path = os.path.join(drvl_path, "branches", "main", "users")
-    
-    if not os.path.exists(users_file_path):
-        print("Users.txt file doesn't exist. Kindly restore it back to proceed further.")
-        return
-        
-    username = extract_username_from_file(users_file_path)
+ 
+    username = extract_username_from_file(dir_path)
     
     commit = {
         "timestamp": datetime.utcnow().isoformat(),
@@ -383,6 +377,7 @@ def print_usage_help():
     print("drvl user show - To see present user")
     print("drvl user set <username> - To change user")
     print("drvl push <path> - To push your file to another folder")
+    print("drvl clear - To clear the terminal")
     print("Created by - Dhruvil")
 
 def push(base_directory, destination_path):
@@ -405,6 +400,32 @@ def push(base_directory, destination_path):
         print("commits successfully copied to destination folder")
         return
 
+def display_logs(commits_path):
+    print()
+    try:
+        with open(commits_path, 'r') as commits_file:
+            commits_data = json.load(commits_file)
+
+        if commits_data:
+            print("Commits:")
+            print()
+            for commit in commits_data:
+                print(f"Commit Hash: {commit['commit_hash']}")
+                print(f"Timestamp: {commit['timestamp']}")
+                print(f"User: {commit['user-name']}")
+                print(f"Message: {commit['message']}")
+                print(f"Date: {commit['date']}")
+                print("Files:")
+                for file_info in commit['files']:
+                    print(f"  - Filename: {file_info['filename']}")
+                    print(f"    File Path: {file_info['file_path']}")
+                print("------------------------------")
+        else:
+            print("No commits found.")
+
+    except FileNotFoundError:
+        print(f"Error: File '{commits_path}' not found.")
+
 class init:
     def __init__(self, dir_path):
         self.curr_dir_path = dir_path
@@ -412,6 +433,12 @@ class init:
 
         if not os.path.exists(os.path.join(self.curr_dir_path, ".drvl")):
             self.user = input("Provide a username: ")
+            user_name_arr = self.user.split()
+            
+            if(len(user_name_arr)>1):
+                print("exiting!! kindly enter username without any break")
+                return
+            
             self.drvl_makedirs(self.curr_dir_path, self.user)
             print(".drvl created successfully")
             
@@ -599,6 +626,34 @@ while True:
         else:
             print("Wrong syntax for user set. Use 'user set <username>'.")
             continue
+        
+    elif args[0] == "log":
+        
+        if not os.path.exists(dir_path + "/.drvl"):
+            print("Exiting program, This folder has not been initialized/ .drvl doesn't exist, Use init command to initialize ")
+            continue
+
+        if len(args) == 1:
+            commits_path = os.path.join(dir_path, ".drvl", "objects","commits.json")
+            display_logs(commits_path)
+        else:
+            print("Wrong syntax for log. Use 'log'.")
+            continue
+        
+    elif args[0] == "clear":
+        
+        if len(args)>1:
+            print("Wrong syntax for log. Use 'log'.")
+            continue
+        
+        if os.name == 'posix':  # For Unix/Linux/MacOS
+            os.system('clear')
+        elif os.name == 'nt':  # For Windows
+            os.system('cls')
+        else:
+            print("Clear screen command not supported on this platform.")
+            continue
+
     
     else:
         print("Invalid command. Please try again.")
