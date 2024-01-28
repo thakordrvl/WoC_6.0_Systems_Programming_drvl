@@ -200,7 +200,6 @@ def get_untracked_files(dir_path):
 def decode_and_update_files(commit, destination_folder, flag2):
     
     base_path = os.getcwd()
-    
     files = commit.get("files", [])
     for file_data in files:
         filename = file_data.get("filename")
@@ -217,7 +216,7 @@ def decode_and_update_files(commit, destination_folder, flag2):
                 file.write(decoded_content)
 
             if flag2:
-                md5_hash_path = os.path.join(universal_drvl_path, 'objects', 'files_md5_hash.json')
+                md5_hash_path = os.path.join(dir_path,".drvl",'objects', 'files_md5_hash.json')
                 md5_hash_data = {}
 
                 # Update MD5 hash dictionary with the current file
@@ -230,15 +229,21 @@ def decode_and_update_files(commit, destination_folder, flag2):
                     md5_hash_file.write('\n')
                     
             print(f"File '{filename}' updated/copied.")
+                    
         except (PermissionError, FileNotFoundError) as e:
             print(f"Error updating/copying file '{filename}': {str(e)}")
+            return None
+        
         except Exception as e:
             print(f"Unexpected error updating/copying file '{filename}': {str(e)}")
+            return None
+        
+    return True
    
 def checkout_commit(md5_hash, dir_path):
-    
-    commits_path = os.path.join(dir_path,".drvl","objects","commits.json")
-    
+    commits_path = os.path.join(dir_path, ".drvl", "objects", "commits.json")
+    md5_hash_path = os.path.join(dir_path, ".drvl", "objects", "files_md5_hash.json")
+
     try:
         with open(commits_path, 'r') as commits_file:
             commits_data = json.load(commits_file)
@@ -251,22 +256,23 @@ def checkout_commit(md5_hash, dir_path):
                 break
 
         if commit_index is not None:
-            # Revert changes in reverse order until the specified commit
-            while commits_data and commits_data[-1]['commit_hash'] != md5_hash:
-                commit = commits_data.pop()
-                decode_and_update_files(commit, dir_path,True)
+            # Remove subsequent commits from the end
+            while len(commits_data) > commit_index + 1:
+                commits_data.pop()
+                
+            commit_to_checkout = commits_data[-1];
+            decode_and_update_files(commit_to_checkout, dir_path, True)
+            # Update MD5 hash file with the MD5 values from the specified commit
+            with open(md5_hash_path, 'w') as md5_hash_file:
+                md5_hash_data = {file_info['file_path']: compute_md5(file_info['file_path'])
+                                 for file_info in commits_data[-1]['files']}
+                json.dump(md5_hash_data, md5_hash_file, indent=2)
+                md5_hash_file.write('\n')
 
-            # # Update MD5 hash file with the MD5 values from the specified commit
-            # with open(md5_hash_path, 'w') as md5_hash_file:
-            #     md5_hash_data = {file_info['file_path']: compute_md5(file_info['file_path'])
-            #                      for file_info in commits_data[commit_index]['files']}
-            #     json.dump(md5_hash_data, md5_hash_file, indent=2)
-            #     md5_hash_file.write('\n')
-
-            # # Update commits.json with the remaining commits
-            # with open(commits_path, 'w') as commits_file:
-            #     json.dump(commits_data[:commit_index], commits_file, indent=2)
-            #     commits_file.write('\n')
+            # Update commits.json with the remaining commit
+            with open(commits_path, 'w') as commits_file:
+                json.dump(commits_data, commits_file, indent=2)
+                commits_file.write('\n')
 
             print(f"Checkout successful. Reverted to commit with hash: {md5_hash}")
         else:
@@ -274,8 +280,11 @@ def checkout_commit(md5_hash, dir_path):
 
     except FileNotFoundError:
         print(f"Error: File '{commits_path}' not found.")
+    except Exception as e:
+        print(f"Error: An unexpected error occurred: {str(e)}")
            
 def commits(base_directory, message):
+    
     drvl_path = os.path.join(base_directory, ".drvl")
     added_path = os.path.join(drvl_path, "branches", "main", 'added.json')
     commits_path = os.path.join(drvl_path, 'objects', 'commits.json')
@@ -318,7 +327,9 @@ def commits(base_directory, message):
     untracked_files = []
     isdeleted = False
     
-    for filename, file_info in added_data.items():
+    # Iterate over a list of keys to avoid dictionary size change during iteration
+    for filename in list(added_data.keys()):
+        file_info = added_data[filename]
         file_path = file_info.get("file_path")
         if os.path.exists(file_path):
             actual_md5 = compute_md5(file_path)
@@ -326,7 +337,7 @@ def commits(base_directory, message):
             
             if actual_md5 == md5_hash_data.get(file_path):
                 # print(f"No changes made to file '{filename}'. Skipping.")
-                untracked_files.append({"filename":filename,"file_path":file_path,"encoded_content":encoded_content})
+                untracked_files.append({"filename": filename, "file_path": file_path, "encoded_content": encoded_content})
                 continue
             
             if actual_md5 == file_info.get("md5 hash") or filename == "main.py":
@@ -336,11 +347,16 @@ def commits(base_directory, message):
                 print(f"Warning: File '{filename}' has changed. Kindly use the Add command first.")
                 return
         else:
-            print(f"Warning: File '{filename}' not found.")
+            print(f"Warning: File '{filename}' not found. Removed from added.json.")
             isdeleted = True
+            del added_data[filename]  # Remove the not found file from added_data
+
+    # Update added.json with the remaining files
+    with open(added_path, 'w') as added_file:
+        json.dump(added_data, added_file, indent=2)
+        added_file.write('\n')        
 
     # Check if commit has files before appending it to commits
-    
     if isdeleted:
         for item in untracked_files:
             commit["files"].append(item)
@@ -457,9 +473,9 @@ def push(base_directory, destination_path):
         return
 
     last_commit = commits[-1]
+    
     if decode_and_update_files(last_commit,destination_path,False):
         print("commits successfully copied to destination folder")
-        return
 
 def display_logs(commits_path):
     print()
@@ -726,6 +742,15 @@ while True:
         else:
             print("Clear screen command not supported on this platform.")
             continue
+        
+    elif args[0] == "checkout":
+        
+        if len(args)>2 or len(args)==1:
+            print("Wrong syntax for log. Use 'checkout <hash>'.")
+            continue
+        
+        checkout_commit(args[1],dir_path)
+        
     else:
         print("Invalid command. Please try again.")
     
