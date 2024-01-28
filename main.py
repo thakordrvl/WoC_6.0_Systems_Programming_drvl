@@ -81,7 +81,10 @@ def extract_universal_drvl_path(file_path):
         print(f"Error: File '{file_path}' not found.")
         return None
 
-def extract_username_from_file(file_path):
+def extract_username_from_file(dir_path):
+    
+    file_path = os.path.join(dir_path,".drvl","branches","main","users")
+    
     try:
         with open(file_path, 'r') as file:
             lines = file.readlines()
@@ -90,12 +93,28 @@ def extract_username_from_file(file_path):
                     username = line.split("User:")[1].strip()
                     return username
 
-            print(f"Error: 'User:' not found in '{file_path}'.")
+            # print(f"Error: 'User:' not found in '{file_path}'.")
             return None
     except FileNotFoundError:
-        print(f"Error: File '{file_path}' not found.")
+        # print(f"Error: File '{file_path}' not found.")
         return None
 
+def change_user_name(dir_path, new_username):
+    
+    file_path = os.path.join(dir_path,".drvl","branches","main","users")
+    old_user = extract_username_from_file(file_path)
+    
+    with open(file_path, 'r') as file:
+        lines = file.readlines()
+
+    with open(file_path, 'w') as file:
+        for line in lines:
+            if "User:" in line:
+                line = line.replace(line.split("User:")[1].strip(), new_username)
+            file.write(line)
+
+    print(f"Username changed to '{new_username}' in users.txt.")
+    
 def add(to_file_name, file_path):
         
     dir_path = os.getcwd()
@@ -202,7 +221,7 @@ def decode_and_update_files(commit, destination_folder):
             print(f"Error updating/copying file '{filename}': {str(e)}")
         except Exception as e:
             print(f"Unexpected error updating/copying file '{filename}': {str(e)}")
-            
+         
 def commits(base_directory, message):
     drvl_path = os.path.join(base_directory, ".drvl")
     added_path = os.path.join(drvl_path, "branches", "main", 'added.json')
@@ -241,8 +260,14 @@ def commits(base_directory, message):
         "user-name": username, 
         "message": message,
         "date": datetime.utcnow().strftime("%d-%m-%Y"),
+        "commit_hash": None,  # Placeholder for the commit-specific hash
         "files": []
     }
+
+    # Calculate a unique MD5 hash for this commit based on timestamp and files
+    commit_hash_input = f"{commit['timestamp']}:{json.dumps(commit['files'], sort_keys=True)}"
+    commit_hash = hashlib.md5(commit_hash_input.encode()).hexdigest()
+    commit["commit_hash"] = commit_hash
     
     for filename, file_info in added_data.items():
         file_path = file_info.get("file_path")
@@ -417,7 +442,7 @@ class init:
             file.write(f"User:{user_name}\n")
             file.write("universal_drvl_path: " + os.getcwd())
             file.write("\n\n")
-            
+
 while True:
     user_input = input("Enter command: ")
     
@@ -425,6 +450,8 @@ while True:
         continue
     
     args = user_input.split()
+    print(args)
+    
     if args[0] == "exit":
         print("Exiting program.")
         break
@@ -530,18 +557,49 @@ while True:
             print("Exiting program, This folder has not been initialized/ .drvl doesn't exist, Use init command to initialize ")
             continue
 
-        if len(args) > 3 or len(args) <= 2:
+        if len(args) == 2:
+            if args[1][0] == '"' and args[1][-1] == '"':
+                dest_path = args[1][1:-1]  # Remove the leading and trailing quotes
+                universal_drvl_path = extract_universal_drvl_path(os.path.join(dir_path, ".drvl", "branches", "main", "users"))
+                push(dir_path, dest_path)
+            else:
+                print("Invalid push command. Destination should be enclosed in double quotes.")
+                continue
+        else:
             print("Wrong syntax for push. Kindly recompile.")
             continue
-
-        if not os.path.exists(args[1]):
-            print("Destination does not exist. Kindly recompile.")
+        
+    elif args[0] == "user" and len(args)>=2 and args[1]=="show":
+        if not os.path.exists(dir_path + "/.drvl"):
+            print("Exiting program, This folder has not been initialized/ .drvl doesn't exist, Use init command to initialize ")
             continue
 
-        dest_path = args[1]
-        universal_drvl_path = extract_universal_drvl_path(os.path.join(dir_path, ".drvl", "branches", "main", "users"))
-        push(dir_path, dest_path)
-
+        if len(args) == 2 and args[1] == "show":
+            user = extract_username_from_file(dir_path)
+            print(f"user : {user}")
+            
+        else:
+            print("Wrong syntax for user. Use 'user show'.")
+            continue
+        
+    elif args[0] == "user" and len(args)>=3 and args[1]=="set":
+        
+        if not os.path.exists(dir_path + "/.drvl"):
+            print("Exiting program, This folder has not been initialized/ .drvl doesn't exist, Use init command to initialize ")
+            continue
+        
+        if not os.path.exists(os.path.join(dir_path,".drvl","branches","main","users")):
+            print("Error. The users.txt file has been deleted or has been moved. kindly check")
+            continue
+    
+        if len(args) == 3 and args[1] == "set":
+            username = args[2]
+            change_user_name(dir_path, username)
+            
+        else:
+            print("Wrong syntax for user set. Use 'user set <username>'.")
+            continue
+    
     else:
         print("Invalid command. Please try again.")
     
