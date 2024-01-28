@@ -15,14 +15,12 @@ def remove_from_json(json_path):
     try:
         with open(json_path, "w") as json_file:
             json_file.write("{}")
-        # print(f"Content of '{json_path}' successfully removed.")
     except FileNotFoundError:
         print(f"Error: File '{json_path}' not found.")
         return
 
 def append_to_json(json_path, key, value):
     try:
-        # Create the directory structure if it doesn't exist
         os.makedirs(os.path.dirname(json_path), exist_ok=True)
 
         if os.path.exists(json_path):
@@ -32,8 +30,6 @@ def append_to_json(json_path, key, value):
             existing_data = {}
     except FileNotFoundError:
         existing_data = {}
-
-    # Append or update the value for the specified key
     existing_data[key] = value
 
     with open(json_path, "w") as json_file:
@@ -92,11 +88,8 @@ def extract_username_from_file(dir_path):
                 if "User:" in line:
                     username = line.split("User:")[1].strip()
                     return username
-
-            # print(f"Error: 'User:' not found in '{file_path}'.")
             return None
     except FileNotFoundError:
-        # print(f"Error: File '{file_path}' not found.")
         return None
 
 def change_user_name(dir_path, new_username):
@@ -145,7 +138,6 @@ def addallfiles(dir_path, flag):
     for item in files_directories:
         
         full_path = os.path.join(dir_path,item)
-        # print(full_path)
 
         if os.path.isdir(full_path) and item != '.drvl' and item!='.git':
             addallfiles(full_path,True)
@@ -218,12 +210,10 @@ def decode_and_update_files(commit, destination_folder, flag2):
             if flag2:
                 md5_hash_path = os.path.join(dir_path,".drvl",'objects', 'files_md5_hash.json')
                 md5_hash_data = {}
-
-                # Update MD5 hash dictionary with the current file
+                
                 actual_md5 = compute_md5(destination_path)
                 md5_hash_data[relative_path] = actual_md5
 
-                # Write updated MD5 hash dictionary to the MD5 hash file
                 with open(md5_hash_path, 'w') as md5_hash_file:
                     json.dump(md5_hash_data, md5_hash_file, indent=2)
                     md5_hash_file.write('\n')
@@ -562,65 +552,81 @@ while True:
     
     if args[0] == "exit":
         print("Exiting program.")
+        print()
         break
     
     if args[0]=="help":
         if len(args) > 1:
             print("wrong syntax for help. Kindly recompile")
+            print()
             continue
         
         universal_drvl_path = extract_universal_drvl_path(os.path.join(dir_path, ".drvl", "branches", "main", "users"))
         print_usage_help()
+        print()
         
     elif args[0] == "init":
         if len(args) > 1:
             print("wrong syntax for help. Kindly recompile")
+            print()
             continue
         
         init(dir_path)
+        print()
         
     elif args[0] == "status":
         if not os.path.exists(dir_path + "/.drvl"):
             print("Exiting program, This folder has not been initialized/ .drvl doesn't exist, Use init command to initialize ")
+            print()
             continue
         
         if len(args) > 1:
             print("Wrong syntax for status. Kindly recompile.")
+            print()
             continue
         
         universal_drvl_path = extract_universal_drvl_path(os.path.join(dir_path, ".drvl", "branches", "main", "users"))
         print_status(dir_path)
+        print()
     
     elif args[0] == "add":
         if not os.path.exists(dir_path + "/.drvl"):
             print("Exiting program, This folder has not been initialized/ .drvl doesn't exist, Use init command to initialize ")
+            print()
             continue
         
         if len(args) > 2:
             print("wrong syntax for add command")
+            print()
             continue
 
         if len(args) <= 1:
             print("File Name not given")
+            print()
             continue
 
         elif args[1] == '.':
             universal_drvl_path = extract_universal_drvl_path(os.path.join(dir_path, ".drvl", "branches", "main", "users"))
             addallfiles(dir_path, False)
+            print()
+            
 
         else:
             file_path = os.path.join(dir_path, args[1])
 
             if not os.path.exists(file_path):
                 print("File doesn't exist or File name not given!!")
+                print()
                 continue
 
             universal_drvl_path = extract_universal_drvl_path(os.path.join(dir_path, ".drvl", "branches", "main", "users"))
             add(args[1], file_path)
+            print()
      
     elif args[0] == "commit":
         if not os.path.exists(dir_path + "/.drvl"):
             print("Exiting program, This folder has not been initialized/ .drvl doesn't exist, Use init command to initialize ")
+            print()
             continue
 
         if args[1] == "-m":
@@ -635,97 +641,123 @@ while True:
 
                 if flag1==False:
                     print("Cannot commit with empty message kindly recompile")
+                    print()
                     continue
                                
                 universal_drvl_path = extract_universal_drvl_path(os.path.join(dir_path, ".drvl", "branches", "main", "users"))
                 commits(dir_path, commit_message)
+                print()
             else:
                 print("Invalid commit command. Use 'commit -m \"message\"'.")
+                print()
                 continue
         else:
             print("Invalid commit command. Use 'commit -m \"message\"'.")
+            print()
             continue
+        
 
     elif args[0] == "rmcommit":
         if not os.path.exists(dir_path + "/.drvl"):
             print("Exiting program, This folder has not been initialized/ .drvl doesn't exist, Use init command to initialize ")
+            print()
             continue
 
         if len(args) > 1:
             print("Wrong syntax for rmcommit. Kindly recompile.")
+            print()
             continue
 
         universal_drvl_path = extract_universal_drvl_path(os.path.join(dir_path, ".drvl", "branches", "main", "users"))
         rmcommit(dir_path)
+        print()
 
     elif args[0] == "rmadd":
         if not os.path.exists(dir_path + "/.drvl"):
             print("Exiting program, This folder has not been initialized/ .drvl doesn't exist, Use init command to initialize ")
+            print()
             continue
 
         if len(args) > 1:
             print("Wrong syntax for rmadd. Kindly recompile.")
+            print()
             continue
 
         universal_drvl_path = extract_universal_drvl_path(os.path.join(dir_path, ".drvl", "branches", "main", "users"))
         rmadd(dir_path)
+        print()
 
     elif args[0] == "push":
         if not os.path.exists(dir_path + "/.drvl"):
             print("Exiting program, This folder has not been initialized/ .drvl doesn't exist, Use init command to initialize ")
+            print()
             continue
         
         dest_path = " ".join(args[1:]).strip('"')
         universal_drvl_path = extract_universal_drvl_path(os.path.join(dir_path, ".drvl", "branches", "main", "users"))
+        push(dir_path,dest_path)
+        print()
       
     elif args[0] == "user" and len(args)>=2 and args[1]=="show":
         if not os.path.exists(dir_path + "/.drvl"):
             print("Exiting program, This folder has not been initialized/ .drvl doesn't exist, Use init command to initialize ")
+            print()
             continue
 
         if len(args) == 2 and args[1] == "show":
             user = extract_username_from_file(dir_path)
             print(f"user : {user}")
+            print()
             
         else:
             print("Wrong syntax for user. Use 'user show'.")
+            print()
             continue
         
     elif args[0] == "user" and len(args)>=3 and args[1]=="set":
         
         if not os.path.exists(dir_path + "/.drvl"):
             print("Exiting program, This folder has not been initialized/ .drvl doesn't exist, Use init command to initialize ")
+            print()
             continue
         
         if not os.path.exists(os.path.join(dir_path,".drvl","branches","main","users")):
             print("Error. The users.txt file has been deleted or has been moved. kindly check")
+            print()
             continue
     
         if len(args) == 3 and args[1] == "set":
             username = args[2]
             change_user_name(dir_path, username)
+            print()
             
         else:
             print("Wrong syntax for user set. Use 'user set <username>'.")
+            print()
             continue
         
     elif args[0] == "log":
         
         if not os.path.exists(dir_path + "/.drvl"):
             print("Exiting program, This folder has not been initialized/ .drvl doesn't exist, Use init command to initialize ")
+            print()
             continue
 
         if len(args) == 1:
             commits_path = os.path.join(dir_path, ".drvl", "objects","commits.json")
             display_logs(commits_path)
+            print()
+            
         else:
             print("Wrong syntax for log. Use 'log'.")
+            print()
             continue
         
     elif args[0] == "clear":
         
         if len(args)>1:
             print("Wrong syntax for log. Use 'log'.")
+            print()
             continue
         
         if os.name == 'posix': 
@@ -736,16 +768,20 @@ while True:
             
         else:
             print("Clear screen command not supported on this platform.")
+            print()
             continue
         
     elif args[0] == "checkout":
         
         if len(args)>2 or len(args)==1:
             print("Wrong syntax for log. Use 'checkout <hash>'.")
+            print()
             continue
         
         checkout_commit(args[1],dir_path)
+        print()
         
     else:
+        print()
         print("Invalid command. Please try again.")
     
