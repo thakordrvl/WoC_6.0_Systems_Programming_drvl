@@ -808,6 +808,7 @@ while True:
         
     elif args[0] == "ls":
         if len(args) != 2:
+            print("Invalid syntax for ls. Use 'ls <path>'.")
             print()
             continue
         
@@ -841,4 +842,3 @@ while True:
     else:
         print("Invalid command. Please try again.")
         print()
-    
