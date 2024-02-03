@@ -448,7 +448,7 @@ def push(base_directory, destination_path):
     drvl_path = os.path.join(base_directory, ".drvl")
     commits_path = os.path.join(drvl_path, 'objects', 'commits.json')
     
-    if os.path.exists(destination_path)==False:
+    if os.path.exists(destination_path)==False or destination_path[0]=='.':
         print("Destination path/directory doesnt exist kindly check")
         return
 
@@ -543,8 +543,8 @@ while True:
     if universal_dir_path==None:
         universal_dir_path = input("Enter directory location where you want to use .drvl : ")
         print()
-        
-        if(os.path.exists(universal_dir_path)==False):
+                
+        if(os.path.exists(universal_dir_path)==False or universal_dir_path[0]=='.'):
             print("The path you have given doesnt exists, kindly give existing path")
             print()
             universal_dir_path = None
